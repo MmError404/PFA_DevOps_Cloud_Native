@@ -1,0 +1,26 @@
+name: CI/CD Docker Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupération du code source
+        uses: actions/checkout@v4
+
+      - name: Connexion à Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Construction de l’image Docker
+        run: docker build -t hajarbenzakour/pfa-ticket-app:latest ./app
+
+      - name: Publication de l’image sur Docker Hub
+        run: docker push hajarbenzakour/pfa-ticket-app:latest
