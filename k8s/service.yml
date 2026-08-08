@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pfa-ticket-app-service
+spec:
+  type: ClusterIP
+  selector:
+    app: pfa-ticket-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
