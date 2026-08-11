@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: pfa-ticket-app
-          image: hajarbenzakour/pfa-ticket-app:v1
+          image: hajarbenzakour/pfa-ticket-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
