@@ -212,6 +212,9 @@ def metrics():
     get_platform_status()
     return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
+@app.route("/metrics-ui")
+def metrics_ui():
+    return render_template("metrics.html")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

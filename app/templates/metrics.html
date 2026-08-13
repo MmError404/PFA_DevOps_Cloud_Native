@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>CloudOps Metrics</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <main class="main" style="margin-left: 0;">
+        <header class="topbar">
+            <div>
+                <h1>CloudOps Metrics</h1>
+                <p>Visualisation lisible des métriques exposées par l’application</p>
+            </div>
+
+            <div class="topbar-status">
+                <a class="mini-link" href="/">Dashboard</a>
+                <a class="mini-link" href="/metrics" target="_blank">Raw /metrics</a>
+                <button onclick="loadMetrics()">Refresh</button>
+            </div>
+        </header>
+
+        <section class="status-banner healthy-banner">
+            <div>
+                <span class="small-label">Endpoint Prometheus</span>
+                <h2>/metrics</h2>
+            </div>
+            <p>Ces données sont collectées automatiquement par Prometheus.</p>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Métriques HTTP</h2>
+                <span>Trafic applicatif</span>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Métrique</th>
+                            <th>Labels</th>
+                            <th>Valeur</th>
+                        </tr>
+                    </thead>
+                    <tbody id="http_metrics"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Métriques Kubernetes</h2>
+                <span>Pods et services observés</span>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Métrique</th>
+                            <th>Labels</th>
+                            <th>Valeur</th>
+                        </tr>
+                    </thead>
+                    <tbody id="k8s_metrics"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function parseMetricLine(line) {
+            const match = line.match(/^([a-zA-Z_:][a-zA-Z0-9_:]*)(\{.*\})?\s+(.+)$/);
+
+            if (!match) {
+                return null;
+            }
+
+            return {
+                name: match[1],
+                labels: match[2] || "-",
+                value: match[3]
+            };
+        }
+
+        async function loadMetrics() {
+            const response = await fetch("/metrics");
+            const text = await response.text();
+            const lines = text.split("\\n");
+
+            let httpHtml = "";
+            let k8sHtml = "";
+
+            lines.forEach(line => {
+                if (line.startsWith("#") || line.trim() === "") {
+                    return;
+                }
+
+                const metric = parseMetricLine(line);
+
+                if (!metric) {
+                    return;
+                }
+
+                const row = `
+                    <tr>
+                        <td>${metric.name}</td>
+                        <td>${metric.labels}</td>
+                        <td>${metric.value}</td>
+                    </tr>
+                `;
+
+                if (metric.name.includes("pfa_http_requests_total")) {
+                    httpHtml += row;
+                }
+
+                if (
+                    metric.name.includes("cloudops_kubernetes_pods_total") ||
+                    metric.name.includes("cloudops_kubernetes_services_total")
+                ) {
+                    k8sHtml += row;
+                }
+            });
+
+            document.getElementById("http_metrics").innerHTML = httpHtml || "<tr><td colspan='3'>Aucune métrique HTTP trouvée</td></tr>";
+            document.getElementById("k8s_metrics").innerHTML = k8sHtml || "<tr><td colspan='3'>Aucune métrique Kubernetes trouvée</td></tr>";
+        }
+
+        loadMetrics();
+        setInterval(loadMetrics, 10000);
+    </script>
+</body>
+</html>

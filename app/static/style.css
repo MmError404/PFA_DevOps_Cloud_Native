@@ -385,3 +385,16 @@ td {
         grid-template-columns: 1fr;
     }
 }
+.mini-link {
+    background: #1e293b;
+    color: #cbd5e1;
+    padding: 10px 14px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.mini-link:hover {
+    background: #334155;
+    color: white;
+}
