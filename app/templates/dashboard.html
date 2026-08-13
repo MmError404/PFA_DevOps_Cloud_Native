@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>CloudOps Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo">C</div>
+            <div>
+                <h2>CloudOps</h2>
+                <span>DevOps Platform</span>
+            </div>
+        </div>
+
+        <nav>
+            <a class="active">Overview</a>
+            <a>Kubernetes</a>
+            <a>GitOps</a>
+            <a>Monitoring</a>
+            <a>Security</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span>Version 4.0.0</span>
+            <strong>Cloud-Native PFA</strong>
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1>CloudOps Dashboard</h1>
+                <p>Supervision temps réel de la plateforme DevOps Cloud-Native</p>
+            </div>
+
+            <div class="topbar-status">
+                <span id="config_mode">Loading...</span>
+                <button onclick="loadStatus()">Refresh</button>
+            </div>
+        </header>
+
+        <section class="status-banner" id="platform_banner">
+            <div>
+                <span class="small-label">Statut global</span>
+                <h2 id="platform_status">Loading...</h2>
+            </div>
+            <p>Dernière mise à jour : <strong id="updated_at">...</strong></p>
+        </section>
+
+        <section class="cards">
+            <div class="card">
+                <span>Namespaces</span>
+                <h3 id="namespaces">0</h3>
+                <p>Espaces surveillés</p>
+            </div>
+
+            <div class="card">
+                <span>Pods</span>
+                <h3 id="pods">0</h3>
+                <p>Charges applicatives</p>
+            </div>
+
+            <div class="card">
+                <span>Running Pods</span>
+                <h3 id="running_pods">0</h3>
+                <p>Pods opérationnels</p>
+            </div>
+
+            <div class="card">
+                <span>Services</span>
+                <h3 id="services">0</h3>
+                <p>Exposition réseau</p>
+            </div>
+
+            <div class="card">
+                <span>Deployments</span>
+                <h3 id="deployments">0</h3>
+                <p>Déploiements Kubernetes</p>
+            </div>
+        </section>
+
+        <section class="grid-two">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Deployments Kubernetes</h2>
+                    <span>Replicas & disponibilité</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Namespace</th>
+                                <th>Deployment</th>
+                                <th>Desired</th>
+                                <th>Available</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deployments_table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Services Kubernetes</h2>
+                    <span>Réseau interne du cluster</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Namespace</th>
+                                <th>Service</th>
+                                <th>Type</th>
+                                <th>Cluster IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="services_table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Pods Kubernetes</h2>
+                <span>État temps réel des composants</span>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Namespace</th>
+                            <th>Pod</th>
+                            <th>Status</th>
+                            <th>Node</th>
+                            <th>Restarts</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pods_table"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function badgeClass(status) {
+            if (status === "Running" || status === "Healthy") {
+                return "badge success";
+            }
+            if (status === "Warning" || status === "Pending") {
+                return "badge warning";
+            }
+            return "badge danger";
+        }
+
+        function bannerClass(status) {
+            const banner = document.getElementById("platform_banner");
+            banner.className = "status-banner";
+
+            if (status === "Healthy") {
+                banner.classList.add("healthy-banner");
+            } else if (status === "Warning") {
+                banner.classList.add("warning-banner");
+            } else {
+                banner.classList.add("danger-banner");
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const response = await fetch("/api/platform-status");
+                const data = await response.json();
+
+                document.getElementById("platform_status").innerText = data.platform_status;
+                document.getElementById("config_mode").innerText = data.config_mode;
+                document.getElementById("updated_at").innerText = data.updated_at;
+
+                document.getElementById("namespaces").innerText = data.summary.namespaces;
+                document.getElementById("pods").innerText = data.summary.pods;
+                document.getElementById("running_pods").innerText = data.summary.running_pods;
+                document.getElementById("services").innerText = data.summary.services;
+                document.getElementById("deployments").innerText = data.summary.deployments;
+
+                bannerClass(data.platform_status);
+
+                let deploymentsHtml = "";
+                data.deployments.forEach(dep => {
+                    deploymentsHtml += `
+                        <tr>
+                            <td>${dep.namespace}</td>
+                            <td>${dep.name}</td>
+                            <td>${dep.desired_replicas}</td>
+                            <td>${dep.available_replicas}</td>
+                            <td><span class="${badgeClass(dep.status)}">${dep.status}</span></td>
+                        </tr>
+                    `;
+                });
+                document.getElementById("deployments_table").innerHTML = deploymentsHtml;
+
+                let servicesHtml = "";
+                data.services.forEach(service => {
+                    servicesHtml += `
+                        <tr>
+                            <td>${service.namespace}</td>
+                            <td>${service.name}</td>
+                            <td>${service.type}</td>
+                            <td>${service.cluster_ip}</td>
+                        </tr>
+                    `;
+                });
+                document.getElementById("services_table").innerHTML = servicesHtml;
+
+                let podsHtml = "";
+                data.pods.forEach(pod => {
+                    podsHtml += `
+                        <tr>
+                            <td>${pod.namespace}</td>
+                            <td>${pod.name}</td>
+                            <td><span class="${badgeClass(pod.status)}">${pod.status}</span></td>
+                            <td>${pod.node}</td>
+                            <td>${pod.restart_count}</td>
+                        </tr>
+                    `;
+                });
+                document.getElementById("pods_table").innerHTML = podsHtml;
+
+            } catch (error) {
+                document.getElementById("platform_status").innerText = "Error";
+                bannerClass("Error");
+            }
+        }
+
+        loadStatus();
+        setInterval(loadStatus, 10000);
+    </script>
+</body>
+</html>
