@@ -17,11 +17,11 @@
         </div>
 
         <nav>
-            <a class="active">Overview</a>
-            <a>Kubernetes</a>
-            <a>GitOps</a>
-            <a>Monitoring</a>
-            <a>Security</a>
+            <a class="active" href="#overview">Overview</a>
+            <a href="#kubernetes">Kubernetes</a>
+            <a href="#gitops">GitOps</a>
+            <a href="#monitoring">Monitoring</a>
+            <a href="#security">Security</a>
         </nav>
 
         <div class="sidebar-footer">
@@ -39,11 +39,11 @@
 
             <div class="topbar-status">
                 <span id="config_mode">Loading...</span>
-                <button onclick="loadStatus()">Refresh</button>
+                <button id="refresh_btn" onclick="loadStatus(true)">Refresh</button>
             </div>
         </header>
 
-        <section class="status-banner" id="platform_banner">
+        <section class="status-banner" id="overview">
             <div>
                 <span class="small-label">Statut global</span>
                 <h2 id="platform_status">Loading...</h2>
@@ -83,7 +83,7 @@
             </div>
         </section>
 
-        <section class="grid-two">
+        <section class="grid-two" id="kubernetes">
             <div class="panel">
                 <div class="panel-header">
                     <h2>Deployments Kubernetes</h2>
@@ -128,6 +128,41 @@
             </div>
         </section>
 
+        <section class="grid-two">
+            <div class="panel" id="gitops">
+                <div class="panel-header">
+                    <h2>GitOps</h2>
+                    <span>Argo CD</span>
+                </div>
+                <p class="info-text">
+                    L’application est synchronisée automatiquement depuis GitHub grâce à Argo CD.
+                    L’état attendu est : <strong>Synced / Healthy</strong>.
+                </p>
+            </div>
+
+            <div class="panel" id="monitoring">
+                <div class="panel-header">
+                    <h2>Monitoring</h2>
+                    <span>Prometheus & Grafana</span>
+                </div>
+                <p class="info-text">
+                    Les métriques applicatives sont exposées via <strong>/metrics</strong> et collectées par Prometheus.
+                    Grafana permet de visualiser le trafic HTTP et la disponibilité de l’application.
+                </p>
+            </div>
+        </section>
+
+        <section class="panel" id="security">
+            <div class="panel-header">
+                <h2>Security</h2>
+                <span>Trivy Scan</span>
+            </div>
+            <p class="info-text">
+                La pipeline GitHub Actions intègre un scan de sécurité avec Trivy avant la publication de l’image Docker.
+                Cela ajoute une couche DevSecOps à la chaîne CI/CD.
+            </p>
+        </section>
+
         <section class="panel">
             <div class="panel-header">
                 <h2>Pods Kubernetes</h2>
@@ -163,7 +198,7 @@
         }
 
         function bannerClass(status) {
-            const banner = document.getElementById("platform_banner");
+            const banner = document.getElementById("overview");
             banner.className = "status-banner";
 
             if (status === "Healthy") {
@@ -175,7 +210,14 @@
             }
         }
 
-        async function loadStatus() {
+        async function loadStatus(manual = false) {
+            const btn = document.getElementById("refresh_btn");
+
+            if (manual && btn) {
+                btn.innerText = "Refreshing...";
+                btn.disabled = true;
+            }
+
             try {
                 const response = await fetch("/api/platform-status");
                 const data = await response.json();
@@ -233,9 +275,25 @@
                 });
                 document.getElementById("pods_table").innerHTML = podsHtml;
 
+                if (manual && btn) {
+                    btn.innerText = "Updated";
+                    setTimeout(() => {
+                        btn.innerText = "Refresh";
+                        btn.disabled = false;
+                    }, 1200);
+                }
+
             } catch (error) {
                 document.getElementById("platform_status").innerText = "Error";
                 bannerClass("Error");
+
+                if (manual && btn) {
+                    btn.innerText = "Error";
+                    setTimeout(() => {
+                        btn.innerText = "Refresh";
+                        btn.disabled = false;
+                    }, 1200);
+                }
             }
         }
 
