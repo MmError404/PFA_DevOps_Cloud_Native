@@ -12,6 +12,7 @@ spec:
       labels:
         app: pfa-ticket-app
     spec:
+      serviceAccountName: cloudops-dashboard-sa
       containers:
         - name: pfa-ticket-app
           image: hajarbenzakour/pfa-ticket-app:latest
